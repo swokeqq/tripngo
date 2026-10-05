@@ -4,7 +4,10 @@ MIGRATIONS_DIR ?= ./migrations
 export
 -include .env
 
-.PHONY: generate migrate-up migrate-down
+.PHONY: dev generate migrate-up migrate-down
+
+dev:
+	go run ./cmd/trip-service
 
 migrate-up:
 	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" up

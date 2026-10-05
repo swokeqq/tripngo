@@ -4,20 +4,37 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/swokeqq/tripngo.git/internal/config"
 	"github.com/swokeqq/tripngo.git/internal/handler"
+	"github.com/swokeqq/tripngo.git/internal/repository/postgres"
+
+	api "github.com/swokeqq/tripngo.git/internal/generated"
 )
 
 type App struct {
 	httpServer *http.Server
+	dbPool     *pgxpool.Pool
+	logger     *slog.Logger
 }
 
-func New(cfg *config.Config, h *handler.Handler) *App {
+func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, error) {
+	dbPool, err := postgres.NewPool(ctx, cfg.Database)
+	if err != nil {
+		return nil, fmt.Errorf("initializing postgresql pool: %w", err)
+	}
+
+	h := handler.New(dbPool, cfg.Database.QueryTimeout)
+
 	r := chi.NewRouter()
-	srv := http.Server{
+
+	api.HandlerFromMux(h, r)
+
+	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           r,
 		ReadTimeout:       cfg.HTTPReadTimeout,
@@ -27,23 +44,29 @@ func New(cfg *config.Config, h *handler.Handler) *App {
 	}
 
 	return &App{
-		httpServer: &srv,
-	}
+		httpServer: srv,
+		dbPool:     dbPool,
+		logger:     logger,
+	}, nil
 }
 
 func (a *App) Run() error {
-	fmt.Printf("starting HTTP server on %s", a.httpServer.Addr)
+	a.logger.Info("starting HTTP server", slog.String("addr:", a.httpServer.Addr))
 	if err := a.httpServer.ListenAndServe(); err != nil &&
 		!errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("listen and server: %w", err)
+		return fmt.Errorf("listen and serve: %w", err)
 	}
 	return nil
 }
 
 func (a *App) Stop(ctx context.Context) error {
-	fmt.Printf("stopping HTTP server...")
+	a.logger.Info("stopping HTTP server...")
 	if err := a.httpServer.Shutdown(ctx); err != nil {
-		return fmt.Errorf("http server shutdown: %w", err)
+		a.logger.Error("http server shutdown failed", slog.Any("error", err))
 	}
+
+	a.dbPool.Close()
+	a.logger.Info("postgresql pool closed successfully")
+
 	return nil
 }
