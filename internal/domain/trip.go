@@ -10,8 +10,8 @@ const (
 )
 
 type Coordinates struct {
-	Latitude   float64
-	Longtitude float64
+	Latitude  float64
+	Longitude float64
 }
 
 type Trip struct {
