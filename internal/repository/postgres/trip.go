@@ -8,9 +8,12 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/swokeqq/tripngo.git/internal/domain"
 )
+
+const pgUniqueViolation = "23505"
 
 type TripRepository struct {
 	db           *pgxpool.Pool
@@ -26,7 +29,6 @@ func NewTripRepository(db *pgxpool.Pool, queryTimeout time.Duration) *TripReposi
 	}
 }
 
-// TODO: ошибку 23505 на trips_driver_active_unique_idx превращать в domain.ErrDriverBusy.
 func (r *TripRepository) Create(ctx context.Context, trip *domain.Trip) error {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
@@ -53,6 +55,12 @@ func (r *TripRepository) Create(ctx context.Context, trip *domain.Trip) error {
 	db := executorFromContext(ctx, r.db)
 	_, err = db.Exec(ctx, query, args...)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) &&
+			pgErr.Code == pgUniqueViolation &&
+			pgErr.ConstraintName == "trips_driver_active_unique_idx" {
+			return domain.ErrDriverBusy
+		}
 		return fmt.Errorf("executing insert trip query: %w", err)
 	}
 

@@ -4,7 +4,7 @@ import "time"
 
 type TripStatusHistory struct {
 	ID         int64
-	TripId     string
+	TripID     string
 	FromStatus *string
 	ToStatus   string
 	Reason     *string

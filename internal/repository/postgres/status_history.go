@@ -34,7 +34,7 @@ func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripS
 			"to_status", "reason", "changed_at",
 		).
 		Values(
-			history.TripId, history.FromStatus,
+			history.TripID, history.FromStatus,
 			history.ToStatus, history.Reason, history.ChangedAt,
 		).
 		ToSql()
@@ -51,6 +51,7 @@ func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripS
 
 	return nil
 }
+
 func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string) ([]domain.TripStatusHistory, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
@@ -80,7 +81,7 @@ func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string
 		var h domain.TripStatusHistory
 		err := rows.Scan(
 			&h.ID,
-			&h.TripId,
+			&h.TripID,
 			&h.FromStatus,
 			&h.ToStatus,
 			&h.Reason,
