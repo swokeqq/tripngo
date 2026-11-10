@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type TripStatusHistory struct {
-	ID         string
+	ID         int64
 	TripId     string
 	FromStatus *string
 	ToStatus   string

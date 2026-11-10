@@ -5,4 +5,5 @@ import "errors"
 var (
 	ErrTripNotFound         = errors.New("trip not found")
 	ErrTripAlreadyCompleted = errors.New("trip is already completed")
+	ErrDriverBusy           = errors.New("driver already has an active trip")
 )
