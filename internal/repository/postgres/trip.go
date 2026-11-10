@@ -26,6 +26,7 @@ func NewTripRepository(db *pgxpool.Pool, queryTimeout time.Duration) *TripReposi
 	}
 }
 
+// TODO: ошибку 23505 на trips_driver_active_unique_idx превращать в domain.ErrDriverBusy.
 func (r *TripRepository) Create(ctx context.Context, trip *domain.Trip) error {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
@@ -49,7 +50,8 @@ func (r *TripRepository) Create(ctx context.Context, trip *domain.Trip) error {
 		return fmt.Errorf("building insert query for trip: %w", err)
 	}
 
-	_, err = r.db.Exec(ctx, query, args...)
+	db := executorFromContext(ctx, r.db)
+	_, err = db.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("executing insert trip query: %w", err)
 	}
@@ -77,7 +79,8 @@ func (r *TripRepository) GetByID(ctx context.Context, tripID string) (*domain.Tr
 	}
 
 	var trip domain.Trip
-	err = r.db.QueryRow(ctx, query, args...).Scan(
+	db := executorFromContext(ctx, r.db)
+	err = db.QueryRow(ctx, query, args...).Scan(
 		&trip.ID, &trip.UserID, &trip.DriverID,
 		&trip.StartPoint.Latitude, &trip.StartPoint.Longitude,
 		&trip.EndPoint.Latitude, &trip.EndPoint.Longitude,

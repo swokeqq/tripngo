@@ -30,11 +30,11 @@ func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripS
 
 	query, args, err := r.qb.Insert("trip_status_history").
 		Columns(
-			"id", "trip_id", "from_status",
+			"trip_id", "from_status",
 			"to_status", "reason", "changed_at",
 		).
 		Values(
-			history.ID, history.TripId, history.FromStatus,
+			history.TripId, history.FromStatus,
 			history.ToStatus, history.Reason, history.ChangedAt,
 		).
 		ToSql()
@@ -43,7 +43,8 @@ func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripS
 		return fmt.Errorf("building insert query string for trip status history: %w", err)
 	}
 
-	_, err = r.db.Exec(ctx, query, args...)
+	db := executorFromContext(ctx, r.db)
+	_, err = db.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("executing query string for trip status history: %w", err)
 	}
@@ -67,7 +68,8 @@ func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string
 		return nil, fmt.Errorf("building select query for trip status history: %w", err)
 	}
 
-	rows, err := r.db.Query(ctx, query, args...)
+	db := executorFromContext(ctx, r.db)
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("executing select query for trip history status: %w", err)
 	}
