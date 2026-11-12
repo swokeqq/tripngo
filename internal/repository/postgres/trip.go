@@ -105,3 +105,44 @@ func (r *TripRepository) GetByID(ctx context.Context, tripID string) (*domain.Tr
 
 	return &trip, nil
 }
+
+func (r *TripRepository) Finish(ctx context.Context, tripID string, finishedAt time.Time) (*domain.Trip, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+
+	query, args, err := r.qb.Update("trips").
+		Set("status", domain.StatusCompleted).
+		Set("updated_at", finishedAt).
+		Set("finished_at", finishedAt).
+		Where(squirrel.Eq{"id": tripID, "status": domain.StatusActive}).
+		Suffix("RETURNING id, user_id, driver_id, start_latitude, " +
+			"start_longitude, end_latitude, end_longitude, price, status," +
+			"started_at, created_at, updated_at, finished_at").
+		ToSql()
+
+	if err != nil {
+		return nil, fmt.Errorf("building update query: %w", err)
+	}
+
+	var trip domain.Trip
+	db := executorFromContext(ctx, r.db)
+	err = db.QueryRow(ctx, query, args...).Scan(&trip.ID, &trip.UserID, &trip.DriverID,
+		&trip.StartPoint.Latitude, &trip.StartPoint.Longitude,
+		&trip.EndPoint.Latitude, &trip.EndPoint.Longitude,
+		&trip.Price, &trip.Status, &trip.StartedAt, &trip.CreatedAt,
+		&trip.UpdatedAt, &trip.FinishedAt)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		if _, getErr := r.GetByID(ctx, tripID); getErr != nil {
+			return nil, getErr
+		}
+
+		return nil, domain.ErrTripAlreadyCompleted
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("update trip: %w", err)
+	}
+
+	return &trip, nil
+}
