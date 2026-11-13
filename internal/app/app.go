@@ -28,10 +28,16 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 		return nil, fmt.Errorf("initializing postgresql pool: %w", err)
 	}
 
-	h := handler.New(dbPool, cfg.Database.QueryTimeout)
+	trips := postgres.NewTripRepository(dbPool, cfg.Database.QueryTimeout)
+	history := postgres.NewStatusHistoryRepository(dbPool, cfg.Database.QueryTimeout)
+	txManager := postgres.NewTxManager(dbPool)
+
+	h := handler.New(dbPool, cfg.Database.QueryTimeout, logger, trips, history, txManager)
 
 	r := chi.NewRouter()
 
+	// TODO: заменить на api.HandlerWithOptions с ErrorHandlerFunc, чтобы невалидный
+	// tripId отдавал 400 в application/problem+json, а не текстом.
 	api.HandlerFromMux(h, r)
 
 	srv := &http.Server{
