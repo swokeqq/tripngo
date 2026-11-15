@@ -58,7 +58,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 }
 
 func (a *App) Run() error {
-	a.logger.Info("starting HTTP server", slog.String("addr:", a.httpServer.Addr))
+	a.logger.Info("starting HTTP server", slog.String("addr", a.httpServer.Addr))
 	if err := a.httpServer.ListenAndServe(); err != nil &&
 		!errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("listen and serve: %w", err)

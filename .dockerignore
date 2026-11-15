@@ -1,0 +1,9 @@
+.env
+bin
+.gitignore
+.git
+README.md
+.env.example
+.vscode
+.tripgo/
+**/*_test.go

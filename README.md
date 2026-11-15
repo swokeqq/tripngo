@@ -13,6 +13,7 @@ MVP сервиса поездок такси: создать поездку, п�
 - Контекстный менеджер транзакций: создание поездки атомарно пишет в две таблицы.
 - Ручки `createTrip`, `getTrip`, `finishTrip`. Ошибки отдаются в `application/problem+json`.
 - Запрет двух активных поездок на водителя и защита от двойного завершения, обе держатся под конкурентной нагрузкой.
+- Задание со звёздочкой: многостадийный `Dockerfile`, итоговый образ на `distroless`, запуск не от root.
 
 ## Требования
 
@@ -21,6 +22,7 @@ MVP сервиса поездок такси: создать поездку, п�
 - [`goose`](https://github.com/pressly/goose) в `PATH` — миграции:
   `go install github.com/pressly/goose/v3/cmd/goose@latest`
 - `curl`, по желанию `psql` для проверок
+- Docker — только для запуска в контейнере
 
 ## Запуск
 
@@ -41,6 +43,39 @@ make run                       # запустить сервис на HTTP_ADDR 
 | `make generate` | перегенерировать код по OpenAPI в `internal/generated` |
 
 Тестов в этой работе нет, они появятся в работе 2.
+
+## Docker
+
+[`deploy/Dockerfile`](deploy/Dockerfile) собирает сервис в две стадии:
+
+- **сборка** на `golang:1.27-alpine`: статический бинарь (`CGO_ENABLED=0`,
+  `-trimpath -ldflags="-s -w"`). Зависимости скачиваются отдельным слоем, поэтому
+  правка кода не сбрасывает их кеш;
+- **итоговый образ** на `gcr.io/distroless/static-debian13:nonroot`: внутри только
+  бинарь, без исходников, тулчейна, кеша сборки и шелла. Процесс запускается от
+  пользователя `nonroot`.
+
+[`.dockerignore`](.dockerignore) не пускает в контекст сборки `.git`, `.env`,
+`.tripgo/`, `bin/`, тесты и файлы редактора.
+
+**Размер итогового образа: 22.5 МБ.**
+
+Сборка выполняется из корня репозитория:
+
+```bash
+docker build -f deploy/Dockerfile -t trip-service:lab01 .
+```
+
+Запуск рядом с PostgreSQL из `tripgoctl`. Бд доступна на `localhost` хоста,
+поэтому контейнеру нужна сеть хоста. Конфигурация передаётся при запуске, в
+образ `.env` не попадает:
+
+```bash
+docker run --rm --network host --env-file .env trip-service:lab01
+```
+
+Проверка: `curl localhost:8080/ready` → `200`. `docker stop` отправляет
+`SIGTERM`, и сервис завершается штатно, через graceful shutdown.
 
 ## Переменные окружения
 
@@ -97,6 +132,7 @@ internal/handler/           HTTP-ручки, валидация, problem+json
 internal/repository/postgres/  пул, репозитории, менеджер транзакций
 internal/generated/         код из OpenAPI (не редактируется руками)
 migrations/                 миграции goose
+deploy/                     Dockerfile
 contracts/                  копия контрактов курса (не редактируется)
 ```
 
