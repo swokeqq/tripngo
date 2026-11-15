@@ -1,0 +1,148 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/swokeqq/tripngo.git/internal/domain"
+)
+
+const pgUniqueViolation = "23505"
+
+type TripRepository struct {
+	db           *pgxpool.Pool
+	queryTimeout time.Duration
+	qb           squirrel.StatementBuilderType
+}
+
+func NewTripRepository(db *pgxpool.Pool, queryTimeout time.Duration) *TripRepository {
+	return &TripRepository{
+		db:           db,
+		queryTimeout: queryTimeout,
+		qb:           squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
+	}
+}
+
+func (r *TripRepository) Create(ctx context.Context, trip *domain.Trip) error {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+
+	query, args, err := r.qb.Insert("trips").
+		Columns(
+			"id", "user_id", "driver_id",
+			"start_latitude", "start_longitude",
+			"end_latitude", "end_longitude",
+			"price", "status", "started_at", "created_at",
+		).
+		Values(
+			trip.ID, trip.UserID, trip.DriverID,
+			trip.StartPoint.Latitude, trip.StartPoint.Longitude,
+			trip.EndPoint.Latitude, trip.EndPoint.Longitude,
+			trip.Price, trip.Status, trip.StartedAt, trip.CreatedAt,
+		).
+		ToSql()
+
+	if err != nil {
+		return fmt.Errorf("building insert query for trip: %w", err)
+	}
+
+	db := executorFromContext(ctx, r.db)
+	_, err = db.Exec(ctx, query, args...)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) &&
+			pgErr.Code == pgUniqueViolation &&
+			pgErr.ConstraintName == "trips_driver_active_unique_idx" {
+			return domain.ErrDriverBusy
+		}
+		return fmt.Errorf("executing insert trip query: %w", err)
+	}
+
+	return nil
+}
+
+func (r *TripRepository) GetByID(ctx context.Context, tripID string) (*domain.Trip, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+
+	query, args, err := r.qb.Select(
+		"id", "user_id", "driver_id",
+		"start_latitude", "start_longitude",
+		"end_latitude", "end_longitude",
+		"price", "status", "started_at", "created_at",
+		"updated_at", "finished_at",
+	).
+		From("trips").
+		Where(squirrel.Eq{"id": tripID}).
+		ToSql()
+
+	if err != nil {
+		return nil, fmt.Errorf("building select query for trip: %w", err)
+	}
+
+	var trip domain.Trip
+	db := executorFromContext(ctx, r.db)
+	err = db.QueryRow(ctx, query, args...).Scan(
+		&trip.ID, &trip.UserID, &trip.DriverID,
+		&trip.StartPoint.Latitude, &trip.StartPoint.Longitude,
+		&trip.EndPoint.Latitude, &trip.EndPoint.Longitude,
+		&trip.Price, &trip.Status, &trip.StartedAt, &trip.CreatedAt,
+		&trip.UpdatedAt, &trip.FinishedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrTripNotFound
+		}
+		return nil, fmt.Errorf("executing select trip query: %w", err)
+	}
+
+	return &trip, nil
+}
+
+func (r *TripRepository) Finish(ctx context.Context, tripID string, finishedAt time.Time) (*domain.Trip, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+
+	query, args, err := r.qb.Update("trips").
+		Set("status", domain.StatusCompleted).
+		Set("updated_at", finishedAt).
+		Set("finished_at", finishedAt).
+		Where(squirrel.Eq{"id": tripID, "status": domain.StatusActive}).
+		Suffix("RETURNING id, user_id, driver_id, start_latitude, " +
+			"start_longitude, end_latitude, end_longitude, price, status," +
+			"started_at, created_at, updated_at, finished_at").
+		ToSql()
+
+	if err != nil {
+		return nil, fmt.Errorf("building update query: %w", err)
+	}
+
+	var trip domain.Trip
+	db := executorFromContext(ctx, r.db)
+	err = db.QueryRow(ctx, query, args...).Scan(&trip.ID, &trip.UserID, &trip.DriverID,
+		&trip.StartPoint.Latitude, &trip.StartPoint.Longitude,
+		&trip.EndPoint.Latitude, &trip.EndPoint.Longitude,
+		&trip.Price, &trip.Status, &trip.StartedAt, &trip.CreatedAt,
+		&trip.UpdatedAt, &trip.FinishedAt)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		if _, getErr := r.GetByID(ctx, tripID); getErr != nil {
+			return nil, getErr
+		}
+
+		return nil, domain.ErrTripAlreadyCompleted
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("update trip: %w", err)
+	}
+
+	return &trip, nil
+}
