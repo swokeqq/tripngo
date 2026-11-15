@@ -36,9 +36,10 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 
 	r := chi.NewRouter()
 
-	// TODO: заменить на api.HandlerWithOptions с ErrorHandlerFunc, чтобы невалидный
-	// tripId отдавал 400 в application/problem+json, а не текстом.
-	api.HandlerFromMux(h, r)
+	api.HandlerWithOptions(h, api.ChiServerOptions{
+		BaseRouter:       r,
+		ErrorHandlerFunc: handler.ParamErrorHandler,
+	})
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
