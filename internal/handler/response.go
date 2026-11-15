@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -125,15 +126,21 @@ func toAPITrip(t *domain.Trip) (api.Trip, error) {
 		return api.Trip{}, fmt.Errorf("parse userId to uuid: %w", err)
 	}
 
+	var finishedAt *time.Time
+	if t.FinishedAt != nil {
+		finishTime := t.FinishedAt.UTC()
+		finishedAt = &finishTime
+	}
+
 	return api.Trip{
 		DriverId:       driverID,
 		EndPoint:       endPoint,
-		FinishedAt:     t.FinishedAt,
+		FinishedAt:     finishedAt,
 		Id:             id,
 		LastPositionAt: nil,
 		Price:          t.Price,
 		StartPoint:     startPoint,
-		StartedAt:      t.StartedAt,
+		StartedAt:      t.StartedAt.UTC(),
 		Status:         api.TripStatus(t.Status),
 		UserId:         userID,
 	}, nil
