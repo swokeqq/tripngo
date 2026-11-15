@@ -68,12 +68,12 @@ func (a *App) Run() error {
 
 func (a *App) Stop(ctx context.Context) error {
 	a.logger.Info("stopping HTTP server...")
-	if err := a.httpServer.Shutdown(ctx); err != nil {
-		a.logger.Error("http server shutdown failed", slog.Any("error", err))
+	err := a.httpServer.Shutdown(ctx)
+	a.dbPool.Close()
+	if err != nil {
+		return fmt.Errorf("http server shutdown failed: %w", err)
 	}
 
-	a.dbPool.Close()
 	a.logger.Info("postgresql pool closed successfully")
-
 	return nil
 }

@@ -13,24 +13,24 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("config error", slog.Any("error", err))
+		os.Exit(1)
+	}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	slog.SetDefault(logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, logger); err != nil {
+	if err := run(ctx, cfg, logger); err != nil {
 		logger.Error("application error", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, logger *slog.Logger) error {
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %v", err)
-	}
-
+func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	application, err := app.New(ctx, cfg, logger)
 	if err != nil {
 		return fmt.Errorf("failed to initialize app: %w", err)

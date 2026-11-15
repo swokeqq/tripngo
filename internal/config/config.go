@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -10,7 +11,7 @@ import (
 
 type Config struct {
 	HTTPAddr        string        `env:"HTTP_ADDR,required"`
-	LogLevel        string        `env:"LOG_LEVEL" envDefault:"info"`
+	LogLevel        slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"10s"`
 
 	// HTTP Timeouts
