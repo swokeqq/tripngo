@@ -11,7 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/swokeqq/tripngo.git/internal/config"
 	"github.com/swokeqq/tripngo.git/internal/handler"
-	"github.com/swokeqq/tripngo.git/internal/repository/postgres"
+	"github.com/swokeqq/tripngo.git/internal/infra/postgres"
+	"github.com/swokeqq/tripngo.git/internal/infra/postgres/transaction"
+	repo "github.com/swokeqq/tripngo.git/internal/repository/postgres"
 
 	api "github.com/swokeqq/tripngo.git/internal/generated"
 )
@@ -28,9 +30,9 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 		return nil, fmt.Errorf("initializing postgresql pool: %w", err)
 	}
 
-	trips := postgres.NewTripRepository(dbPool, cfg.Database.QueryTimeout)
-	history := postgres.NewStatusHistoryRepository(dbPool, cfg.Database.QueryTimeout)
-	txManager := postgres.NewTxManager(dbPool)
+	txManager := transaction.NewTxManager(dbPool)
+	trips := repo.NewTripRepository(txManager, cfg.Database.QueryTimeout)
+	history := repo.NewStatusHistoryRepository(txManager, cfg.Database.QueryTimeout)
 
 	h := handler.New(dbPool, cfg.Database.QueryTimeout, logger, trips, history, txManager)
 

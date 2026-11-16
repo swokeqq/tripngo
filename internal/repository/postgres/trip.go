@@ -9,19 +9,23 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/swokeqq/tripngo.git/internal/domain"
+	"github.com/swokeqq/tripngo.git/internal/infra/postgres/transaction"
 )
 
 const pgUniqueViolation = "23505"
 
+type executorGetter interface {
+	Executor(ctx context.Context) transaction.Querier
+}
+
 type TripRepository struct {
-	db           *pgxpool.Pool
+	db           executorGetter
 	queryTimeout time.Duration
 	qb           squirrel.StatementBuilderType
 }
 
-func NewTripRepository(db *pgxpool.Pool, queryTimeout time.Duration) *TripRepository {
+func NewTripRepository(db executorGetter, queryTimeout time.Duration) *TripRepository {
 	return &TripRepository{
 		db:           db,
 		queryTimeout: queryTimeout,
@@ -52,7 +56,7 @@ func (r *TripRepository) Create(ctx context.Context, trip *domain.Trip) error {
 		return fmt.Errorf("building insert query for trip: %w", err)
 	}
 
-	db := executorFromContext(ctx, r.db)
+	db := r.db.Executor(ctx)
 	_, err = db.Exec(ctx, query, args...)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -87,7 +91,7 @@ func (r *TripRepository) GetByID(ctx context.Context, tripID string) (*domain.Tr
 	}
 
 	var trip domain.Trip
-	db := executorFromContext(ctx, r.db)
+	db := r.db.Executor(ctx)
 	err = db.QueryRow(ctx, query, args...).Scan(
 		&trip.ID, &trip.UserID, &trip.DriverID,
 		&trip.StartPoint.Latitude, &trip.StartPoint.Longitude,
@@ -125,7 +129,7 @@ func (r *TripRepository) Finish(ctx context.Context, tripID string, finishedAt t
 	}
 
 	var trip domain.Trip
-	db := executorFromContext(ctx, r.db)
+	db := r.db.Executor(ctx)
 	err = db.QueryRow(ctx, query, args...).Scan(&trip.ID, &trip.UserID, &trip.DriverID,
 		&trip.StartPoint.Latitude, &trip.StartPoint.Longitude,
 		&trip.EndPoint.Latitude, &trip.EndPoint.Longitude,
@@ -137,7 +141,7 @@ func (r *TripRepository) Finish(ctx context.Context, tripID string, finishedAt t
 			return nil, getErr
 		}
 
-		return nil, domain.ErrTripAlreadyCompleted
+		return nil, domain.ErrTripCompleted
 	}
 
 	if err != nil {

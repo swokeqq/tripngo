@@ -1,4 +1,4 @@
-package postgres
+package transaction
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type executor interface {
+type Querier interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -59,10 +59,10 @@ func (m *TxManager) Do(ctx context.Context, fn func(ctx context.Context) error) 
 	return nil
 }
 
-func executorFromContext(ctx context.Context, pool *pgxpool.Pool) executor {
+func (m *TxManager) Executor(ctx context.Context) Querier {
 	if tx, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
 		return tx
 	}
 
-	return pool
+	return m.pool
 }

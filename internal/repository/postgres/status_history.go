@@ -6,17 +6,16 @@ import (
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/swokeqq/tripngo.git/internal/domain"
 )
 
 type StatusHistoryRepository struct {
-	db           *pgxpool.Pool
+	db           executorGetter
 	queryTimeout time.Duration
 	qb           squirrel.StatementBuilderType
 }
 
-func NewStatusHistoryRepository(db *pgxpool.Pool, queryTimeout time.Duration) *StatusHistoryRepository {
+func NewStatusHistoryRepository(db executorGetter, queryTimeout time.Duration) *StatusHistoryRepository {
 	return &StatusHistoryRepository{
 		db:           db,
 		queryTimeout: queryTimeout,
@@ -43,7 +42,7 @@ func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripS
 		return fmt.Errorf("building insert query string for trip status history: %w", err)
 	}
 
-	db := executorFromContext(ctx, r.db)
+	db := r.db.Executor(ctx)
 	_, err = db.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("executing query string for trip status history: %w", err)
@@ -69,7 +68,7 @@ func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string
 		return nil, fmt.Errorf("building select query for trip status history: %w", err)
 	}
 
-	db := executorFromContext(ctx, r.db)
+	db := r.db.Executor(ctx)
 	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("executing select query for trip history status: %w", err)
