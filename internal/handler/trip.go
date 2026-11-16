@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/swokeqq/tripngo.git/internal/domain"
+	domain "github.com/swokeqq/tripngo.git/internal/domain"
 	api "github.com/swokeqq/tripngo.git/internal/generated"
 )
 

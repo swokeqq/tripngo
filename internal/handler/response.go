@@ -47,7 +47,7 @@ func (h *Handler) writeError(w http.ResponseWriter, r *http.Request, err error) 
 	switch {
 	case errors.Is(err, domain.ErrTripNotFound):
 		writeProblem(w, r, problemTripNotFound, "Trip was not found")
-	case errors.Is(err, domain.ErrTripAlreadyCompleted):
+	case errors.Is(err, domain.ErrTripCompleted):
 		writeProblem(w, r, problemTripCompleted, "Operation is not allowed for a completed trip")
 	case errors.Is(err, domain.ErrDriverBusy):
 		writeProblem(w, r, problemDriverBusy, "Driver already has an active trip")
