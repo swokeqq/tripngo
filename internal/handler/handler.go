@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	api "github.com/swokeqq/tripngo.git/internal/generated"
 	"github.com/swokeqq/tripngo.git/internal/repository/postgres"
 )

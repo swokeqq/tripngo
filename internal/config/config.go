@@ -33,7 +33,6 @@ type DatabaseConfig struct {
 }
 
 func Load() (*Config, error) {
-
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)

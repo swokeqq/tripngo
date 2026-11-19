@@ -9,13 +9,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/swokeqq/tripngo.git/internal/config"
+	api "github.com/swokeqq/tripngo.git/internal/generated"
 	"github.com/swokeqq/tripngo.git/internal/handler"
 	"github.com/swokeqq/tripngo.git/internal/infra/postgres"
 	"github.com/swokeqq/tripngo.git/internal/infra/postgres/transaction"
 	repo "github.com/swokeqq/tripngo.git/internal/repository/postgres"
-
-	api "github.com/swokeqq/tripngo.git/internal/generated"
 )
 
 type App struct {
