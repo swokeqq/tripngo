@@ -24,10 +24,10 @@ type Server struct {
 	logger *slog.Logger
 }
 
-func New(create *create.Handler, get *get.Handler,
-	finish *finish.Handler, ready *ready.Handler, logger *slog.Logger,
+func New(c *create.Handler, g *get.Handler,
+	f *finish.Handler, rd *ready.Handler, logger *slog.Logger,
 ) *Server {
-	return &Server{c: create, g: get, f: finish, rd: ready, logger: logger}
+	return &Server{c: c, g: g, f: f, rd: rd, logger: logger}
 }
 
 func (s *Server) GetTrip(w http.ResponseWriter, r *http.Request, id api.TripId) {
@@ -61,7 +61,7 @@ func (s *Server) ParamErrorHandler(w http.ResponseWriter, r *http.Request, err e
 	}
 
 	response.WriteError(w, r, s.logger,
-		&tripdomain.ValidationError{Field: "body", Reason: err.Error()})
+		&tripdomain.ValidationError{Field: "request", Reason: err.Error()})
 }
 
 var _ api.ServerInterface = (*Server)(nil)
