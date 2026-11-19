@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	domain "github.com/swokeqq/tripngo.git/internal/domain"
 	api "github.com/swokeqq/tripngo.git/internal/generated"
+	"github.com/swokeqq/tripngo.git/internal/model"
 )
 
 // CreateTrip — POST /api/v1/trips.
@@ -40,7 +41,7 @@ func (h *Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.
 		FinishedAt: nil,
 		UpdatedAt:  &now,
 	}
-	history := &domain.TripStatusHistory{
+	history := &model.TripStatusHistory{
 		TripID:     trip.ID,
 		FromStatus: nil,
 		ToStatus:   string(domain.StatusActive),
@@ -93,7 +94,7 @@ func (h *Handler) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.
 	tripID := tripId.String()
 	var trip *domain.Trip
 
-	history := &domain.TripStatusHistory{
+	history := &model.TripStatusHistory{
 		TripID:     tripID,
 		FromStatus: &statusActive,
 		ToStatus:   string(domain.StatusCompleted),

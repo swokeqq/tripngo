@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/swokeqq/tripngo.git/internal/domain"
+
+	"github.com/swokeqq/tripngo.git/internal/model"
 )
 
 type StatusHistoryRepository struct {
@@ -23,7 +24,7 @@ func NewStatusHistoryRepository(db executorGetter, queryTimeout time.Duration) *
 	}
 }
 
-func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripStatusHistory) error {
+func (r *StatusHistoryRepository) Add(ctx context.Context, history *model.TripStatusHistory) error {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 
@@ -37,7 +38,6 @@ func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripS
 			history.ToStatus, history.Reason, history.ChangedAt,
 		).
 		ToSql()
-
 	if err != nil {
 		return fmt.Errorf("building insert query string for trip status history: %w", err)
 	}
@@ -51,7 +51,7 @@ func (r *StatusHistoryRepository) Add(ctx context.Context, history *domain.TripS
 	return nil
 }
 
-func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string) ([]domain.TripStatusHistory, error) {
+func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string) ([]model.TripStatusHistory, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 
@@ -63,7 +63,6 @@ func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string
 		Where(squirrel.Eq{"trip_id": tripID}).
 		OrderBy("changed_at ASC").
 		ToSql()
-
 	if err != nil {
 		return nil, fmt.Errorf("building select query for trip status history: %w", err)
 	}
@@ -75,9 +74,9 @@ func (r *StatusHistoryRepository) GetByTripID(ctx context.Context, tripID string
 	}
 	defer rows.Close()
 
-	var historyList []domain.TripStatusHistory
+	var historyList []model.TripStatusHistory
 	for rows.Next() {
-		var h domain.TripStatusHistory
+		var h model.TripStatusHistory
 		err := rows.Scan(
 			&h.ID,
 			&h.TripID,

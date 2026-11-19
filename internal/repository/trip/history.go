@@ -1,0 +1,84 @@
+package trip
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/Masterminds/squirrel"
+
+	"github.com/swokeqq/tripngo.git/internal/model"
+)
+
+func (r *HistoryRepository) Add(ctx context.Context, history *model.TripStatusHistory) error {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+
+	query, args, err := r.qb.Insert("trip_status_history").
+		Columns(
+			"trip_id", "from_status",
+			"to_status", "reason", "changed_at",
+		).
+		Values(
+			history.TripID, history.FromStatus,
+			history.ToStatus, history.Reason, history.ChangedAt,
+		).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("building insert query string for trip status history: %w", err)
+	}
+
+	db := r.db.Executor(ctx)
+	_, err = db.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("executing query string for trip status history: %w", err)
+	}
+
+	return nil
+}
+
+func (r *HistoryRepository) GetByTripID(ctx context.Context, tripID string) ([]model.TripStatusHistory, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+
+	query, args, err := r.qb.Select(
+		"id", "trip_id", "from_status",
+		"to_status", "reason", "changed_at",
+	).
+		From("trip_status_history").
+		Where(squirrel.Eq{"trip_id": tripID}).
+		OrderBy("changed_at ASC").
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("building select query for trip status history: %w", err)
+	}
+
+	db := r.db.Executor(ctx)
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("executing select query for trip history status: %w", err)
+	}
+	defer rows.Close()
+
+	var historyList []model.TripStatusHistory
+	for rows.Next() {
+		var h model.TripStatusHistory
+		err := rows.Scan(
+			&h.ID,
+			&h.TripID,
+			&h.FromStatus,
+			&h.ToStatus,
+			&h.Reason,
+			&h.ChangedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scanning trip status history row: %w", err)
+		}
+		historyList = append(historyList, h)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterrating trip status history rows: %w", err)
+	}
+
+	return historyList, nil
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/swokeqq/tripngo.git/internal/domain"
 	"github.com/swokeqq/tripngo.git/internal/infra/postgres/transaction"
 )
@@ -51,7 +52,6 @@ func (r *TripRepository) Create(ctx context.Context, trip *domain.Trip) error {
 			trip.Price, trip.Status, trip.StartedAt, trip.CreatedAt,
 		).
 		ToSql()
-
 	if err != nil {
 		return fmt.Errorf("building insert query for trip: %w", err)
 	}
@@ -85,7 +85,6 @@ func (r *TripRepository) GetByID(ctx context.Context, tripID string) (*domain.Tr
 		From("trips").
 		Where(squirrel.Eq{"id": tripID}).
 		ToSql()
-
 	if err != nil {
 		return nil, fmt.Errorf("building select query for trip: %w", err)
 	}
@@ -99,7 +98,6 @@ func (r *TripRepository) GetByID(ctx context.Context, tripID string) (*domain.Tr
 		&trip.Price, &trip.Status, &trip.StartedAt, &trip.CreatedAt,
 		&trip.UpdatedAt, &trip.FinishedAt,
 	)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrTripNotFound
@@ -123,7 +121,6 @@ func (r *TripRepository) Finish(ctx context.Context, tripID string, finishedAt t
 			"start_longitude, end_latitude, end_longitude, price, status," +
 			"started_at, created_at, updated_at, finished_at").
 		ToSql()
-
 	if err != nil {
 		return nil, fmt.Errorf("building update query: %w", err)
 	}
