@@ -11,7 +11,7 @@ import (
 type (
 	tripRepository interface {
 		GetByID(ctx context.Context, id string) (*trip.Trip, error)
-		SaveFinished(ctx context.Context, t *trip.Trip) error
+		Finish(ctx context.Context, t *trip.Trip) error
 	}
 	historyRepository interface {
 		Add(ctx context.Context, history *model.TripStatusHistory) error

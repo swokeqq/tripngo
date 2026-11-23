@@ -19,13 +19,15 @@ func (r *Repository) Save(ctx context.Context, trip *tripdomain.Trip) error {
 			"id", "user_id", "driver_id",
 			"start_latitude", "start_longitude",
 			"end_latitude", "end_longitude",
-			"price", "status", "started_at", "created_at",
+			"price", "status", "started_at",
+			"created_at", "updated_at",
 		).
 		Values(
 			trip.ID, trip.UserID, trip.DriverID,
 			trip.StartPoint.Latitude, trip.StartPoint.Longitude,
 			trip.EndPoint.Latitude, trip.EndPoint.Longitude,
-			trip.Price, trip.Status, trip.StartedAt, trip.CreatedAt,
+			trip.Price, trip.Status, trip.StartedAt,
+			trip.CreatedAt, trip.UpdatedAt,
 		).
 		ToSql()
 	if err != nil {

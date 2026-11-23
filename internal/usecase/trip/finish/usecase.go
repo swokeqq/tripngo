@@ -35,7 +35,7 @@ func (uc *Usecase) Finish(ctx context.Context, tripID string) (*trip.Trip, error
 		if finErr := t.Finish(now); finErr != nil {
 			return finErr
 		}
-		if saveErr := uc.trips.SaveFinished(ctx, t); saveErr != nil {
+		if saveErr := uc.trips.Finish(ctx, t); saveErr != nil {
 			return fmt.Errorf("save trip: %w", saveErr)
 		}
 		if comErr := uc.history.Add(ctx, &model.TripStatusHistory{

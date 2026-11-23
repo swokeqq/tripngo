@@ -90,6 +90,7 @@ func (t *Trip) Finish(at time.Time) error {
 		return ErrTripCompleted
 	}
 	t.Status = StatusCompleted
+	t.UpdatedAt = &at
 	t.FinishedAt = &at
 	return nil
 }
